@@ -3,53 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hive Monitor Outdoor</title>
+  <title>Hive Monitor Pro</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=DM+Sans:wght@500;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:         #FFFFFF;
-      --surface:    #F8F8F6;
-      --border:     #000000;
-      --text:       #000000;
-      --text-muted: #333333;
-      --amber:      #855400;
-      --green:      #1E4600;
-      --red:        #8C0000;
-      --radius:     8px;
+      --bg: #FFFFFF;
+      --surface: #F8F8F6;
+      --border: #000000;
+      --text: #000000;
+      --radius: 8px;
     }
 
     body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; padding: 10px; }
     .page { max-width: 800px; margin: 0 auto; }
-
-    /* Header & Status */
     .header { padding: 10px 0; border-bottom: 2px solid var(--text); margin-bottom: 15px; }
-    .status-bar {
-      display: flex; align-items: center; gap: 10px; padding: 10px;
-      background: var(--surface); border: 2px solid var(--text);
-      border-radius: var(--radius); margin-bottom: 15px; font-weight: 700; font-size: 13px;
-    }
-    .dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #000; }
-    .dot.ok { background: #2ecc71; }
-    .dot.fail { background: #e74c3c; }
-    .dot.loading { background: #f1c40f; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-    /* Overall Result Banner */
+    /* Result Banner */
     .result-banner {
       display: none; align-items: center; gap: 12px; padding: 15px;
       border-radius: var(--radius); margin-bottom: 15px; border: 2px solid var(--text);
     }
-    .result-banner.pass { background: #EAF3DE; border-color: #3B6D11; color: #1E4600; }
-    .result-banner.fail { background: #FCEBEB; border-color: #A32D2D; color: #8C0000; }
-    .result-banner.offline { background: #FAEEDA; border-color: #BA7517; color: #855400; }
+    .result-banner.pass { background: #EAF3DE; border-color: #3B6D11; }
+    .result-banner.fail { background: #FCEBEB; border-color: #A32D2D; }
+    .result-banner.offline { background: #FAEEDA; border-color: #BA7517; }
     .result-icon { font-size: 24px; font-weight: 700; }
 
     /* Metrics */
     .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
     .metric-card { background: var(--bg); border: 2px solid var(--text); border-radius: var(--radius); padding: 12px; text-align: center; }
-    .m-label { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+    .m-label { font-size: 11px; font-weight: 700; text-transform: uppercase; }
     .m-value { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 700; }
     .badge { font-size: 10px; font-weight: 700; padding: 3px 6px; border: 1px solid var(--text); border-radius: 4px; display: inline-block; margin-top: 5px; }
     .badge.pass { background: #d4edda; }
@@ -58,7 +41,7 @@
     /* Charts */
     .chart-container { border: 2px solid var(--text); border-radius: var(--radius); padding: 15px; margin-bottom: 20px; background: var(--bg); }
     .chart-header { font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; font-size: 14px; }
-    .chart-wrap { position: relative; width: 100%; height: 260px; }
+    .chart-wrap { position: relative; width: 100%; height: 280px; }
 
     @media (max-width: 600px) { .metrics { grid-template-columns: 1fr; } }
   </style>
@@ -67,12 +50,6 @@
 
 <div class="page">
   <div class="header"><h1 style="font-size: 22px;">HIVE MONITOR</h1></div>
-
-  <div class="status-bar">
-    <div id="status-dot" class="dot loading"></div>
-    <span id="status-text">SYNCING...</span>
-    <span id="last-check" style="margin-left: auto;">—</span>
-  </div>
 
   <div class="result-banner" id="result-banner">
     <div class="result-icon" id="result-icon"></div>
@@ -122,24 +99,46 @@
   const LIMIT = 720;
   const RANGE = { co2: { min: 400, max: 10000 }, temp: { min: 70, max: 97 }, hum: { min: 50, max: 60 } };
 
+  // Improved Label Visibility
   function fmtLabel(iso) {
     const d = new Date(iso);
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
-           d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+           d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   function makeChart(ctxId, color) {
     return new Chart(document.getElementById(ctxId), {
       type: 'line',
       data: { labels: [], datasets: [{ 
-        data: [], borderColor: color, borderWidth: 3, pointRadius: 0, tension: 0.2, fill: false, spanGaps: true 
+        data: [], borderColor: color, borderWidth: 3, pointRadius: 2, 
+        pointHoverRadius: 6, tension: 0.2, fill: false, spanGaps: true 
       }]},
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        interaction: { intersect: false, mode: 'index' }, // Makes hover work better
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            enabled: true,
+            backgroundColor: '#000',
+            titleFont: { size: 13 },
+            bodyFont: { size: 15, weight: 'bold' },
+            padding: 12,
+            displayColors: false
+          }
+        },
         scales: {
-          x: { ticks: { color: '#000', font: { weight: 'bold', size: 9 }, maxTicksLimit: 4 } },
-          y: { grid: { color: '#eee' }, ticks: { color: '#000', font: { weight: 'bold' } } }
+          x: { 
+            ticks: { 
+              color: '#000', 
+              font: { weight: 'bold', size: 11 }, // Bigger and bolder for outdoor
+              maxTicksLimit: 4 
+            } 
+          },
+          y: { 
+            grid: { color: '#ddd' }, 
+            ticks: { color: '#000', font: { weight: 'bold', size: 11 } } 
+          }
         }
       }
     });
@@ -167,7 +166,6 @@
       const co2 = parseFloat(last.field1), temp = parseFloat(last.field2), hum = parseFloat(last.field3);
       const timeStr = fmtLabel(last.created_at);
 
-      // Update Individual Metrics
       document.getElementById('v-co2').textContent = Math.round(co2);
       document.getElementById('v-temp').textContent = temp.toFixed(1);
       document.getElementById('v-hum').textContent = hum.toFixed(1);
@@ -183,36 +181,32 @@
       };
       updateBadge('co2', cOk); updateBadge('temp', tOk); updateBadge('hum', hOk);
 
-      // Handle Pass/Fail Banner
       const stale = (Date.now() - new Date(last.created_at).getTime()) > 20 * 60 * 1000;
       if (stale) {
-        setBanner('offline', 'Monitor Offline', 'Last data: ' + timeStr);
-        document.getElementById('status-dot').className = 'dot';
+        setBanner('offline', 'OFFLINE', 'Last: ' + timeStr);
       } else if (cOk && tOk && hOk) {
-        setBanner('pass', 'All Systems Normal', 'Last sync: ' + timeStr);
-        document.getElementById('status-dot').className = 'dot ok';
+        setBanner('pass', 'ALL SYSTEMS NORMAL', 'Last sync: ' + timeStr);
       } else {
-        const fails = [!cOk && 'CO2', !tOk && 'Temp', !hOk && 'Hum'].filter(Boolean).join(', ');
-        setBanner('fail', 'Alert: ' + fails, 'Check hive immediately. Sync: ' + timeStr);
-        document.getElementById('status-dot').className = 'dot fail';
+        setBanner('fail', 'CHECK HIVE', 'Out of range detected at ' + timeStr);
       }
 
-      // Update Charts with Date+Time
       const updateChart = (chart, field) => {
         const values = feeds.map(f => { const v = parseFloat(f[field]); return isNaN(v) ? null : v; });
         chart.data.labels = feeds.map(f => fmtLabel(f.created_at));
         chart.data.datasets[0].data = values;
+        
+        // Dynamic scaling to prevent "flat" lines
+        const valid = values.filter(v => v !== null);
+        const min = Math.min(...valid), max = Math.max(...valid);
+        const pad = (max - min) * 0.2 || 2;
+        chart.options.scales.y.min = Math.floor(min - pad);
+        chart.options.scales.y.max = Math.ceil(max + pad);
+        
         chart.update('none');
       };
       updateChart(charts.co2, 'field1'); updateChart(charts.temp, 'field2'); updateChart(charts.hum, 'field3');
 
-      document.getElementById('status-text').textContent = stale ? 'OFFLINE' : 'ACTIVE';
-      document.getElementById('last-check').textContent = new Date().toLocaleTimeString();
-
-    } catch (e) {
-      document.getElementById('status-text').textContent = 'ERROR';
-      document.getElementById('status-dot').className = 'dot fail';
-    }
+    } catch (e) { console.error(e); }
   }
 
   sync();
