@@ -79,7 +79,7 @@
     }
     .dot.ok      { background: #639922; }
     .dot.fail    { background: #E24B4A; }
-    .dot.loading { animation: blink 1s infinite; }
+    .dot.loading { background: var(--amber); animation: blink 1s infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
     .status-text {
@@ -94,6 +94,50 @@
       white-space: nowrap;
     }
 
+    /* ── Overall result banner ── */
+    .result-banner {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 1.25rem;
+      border: 0.5px solid transparent;
+    }
+    .result-banner.pass {
+      background: var(--green-bg);
+      border-color: rgba(59,109,17,0.20);
+    }
+    .result-banner.fail {
+      background: var(--red-bg);
+      border-color: rgba(163,45,45,0.20);
+    }
+    .result-banner.offline {
+      background: var(--amber-bg);
+      border-color: rgba(186,117,23,0.20);
+    }
+    .result-icon {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 16px; font-weight: 500;
+    }
+    .result-banner.pass  .result-icon { background: #3B6D11; color: #EAF3DE; }
+    .result-banner.fail  .result-icon { background: #A32D2D; color: #FCEBEB; }
+    .result-banner.offline .result-icon { background: #BA7517; color: #FAEEDA; }
+    .result-title {
+      font-size: 15px; font-weight: 500; line-height: 1.3;
+    }
+    .result-banner.pass  .result-title { color: var(--green); }
+    .result-banner.fail  .result-title { color: var(--red);   }
+    .result-banner.offline .result-title { color: var(--amber); }
+    .result-sub {
+      font-size: 12px; margin-top: 2px;
+    }
+    .result-banner.pass  .result-sub { color: #3B6D11; }
+    .result-banner.fail  .result-sub { color: #A32D2D; }
+    .result-banner.offline .result-sub { color: var(--amber); }
+
+    /* ── Offline notice ── */
     .offline-notice {
       display: none;
       padding: 10px 14px;
@@ -120,6 +164,7 @@
     .metric-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; }
     .metric-value { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 500; line-height: 1; }
     .metric-unit  { font-size: 12px; color: var(--text-hint); margin-top: 4px; }
+    .metric-range { font-size: 11px; color: var(--text-hint); margin-top: 3px; }
 
     .badge {
       display: inline-block;
@@ -171,7 +216,7 @@
     </svg>
     <div>
       <div class="title">Mobile Hive Monitor</div>
-      <div class="subtitle">Live sensor data · last 24 hours</div>
+      <div class="subtitle">Live sensor data</div>
     </div>
   </div>
 
@@ -179,6 +224,15 @@
     <div class="dot loading" id="dot"></div>
     <span class="status-text" id="status-text">Connecting...</span>
     <span class="last-update" id="last-update"></span>
+  </div>
+
+  <!-- Overall pass/fail banner -->
+  <div class="result-banner" id="result-banner">
+    <div class="result-icon" id="result-icon"></div>
+    <div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-sub"  id="result-sub"></div>
+    </div>
   </div>
 
   <div class="offline-notice" id="offline-notice">
@@ -190,18 +244,21 @@
       <div class="metric-label">CO2</div>
       <div class="metric-value" id="co2-val">—</div>
       <div class="metric-unit">ppm</div>
+      <div class="metric-range">400 – 5000 ppm</div>
       <span class="badge wait" id="co2-badge">—</span>
     </div>
     <div class="metric">
       <div class="metric-label">Temperature</div>
       <div class="metric-value" id="temp-val">—</div>
       <div class="metric-unit">°F</div>
+      <div class="metric-range">70 – 97 °F</div>
       <span class="badge wait" id="temp-badge">—</span>
     </div>
     <div class="metric">
       <div class="metric-label">Humidity</div>
       <div class="metric-value" id="hum-val">—</div>
       <div class="metric-unit">%</div>
+      <div class="metric-range">50 – 60 %</div>
       <span class="badge wait" id="hum-badge">—</span>
     </div>
   </div>
@@ -220,7 +277,7 @@
   </div>
 
   <div class="footer">
-    Refreshes every 5 minutes &nbsp;·&nbsp; Data stored on ThingSpeak<br>
+    Refreshes every 5 minutes &nbsp;·&nbsp; Data stored on ThingSpeak (last 60 days on free plan)<br>
     Readings upload when the hive monitor is powered on
   </div>
 
@@ -228,10 +285,12 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-  const CHANNEL         = '3329131';
-  const RESULTS         = 288;        // 24 hrs at 5-min intervals
-  const REFRESH_MS      = 300000;     // re-fetch every 5 minutes
-  const OFFLINE_GAP_MS  = 12 * 60 * 1000; // warn if last reading > 12 min ago
+  const CHANNEL        = '3329131';
+  // const RESULTS        = 288;               // 24 hrs at 5-min intervals
+  const RESULTS        = 720;               // 10 days  at 5-min intervals if used for 24 hours 
+  // but prob not so end up being more than 10 days
+  const REFRESH_MS     = 300000;            // re-fetch every 5 minutes
+  const OFFLINE_GAP_MS = 12 * 60 * 1000;   // warn if last reading > 12 min ago
 
   const THRESHOLDS = {
     co2:  { min: 400, max: 5000 },
@@ -242,6 +301,26 @@
   const isDark  = matchMedia('(prefers-color-scheme: dark)').matches;
   const gridCol = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
   const tickCol = '#888780';
+
+  // Format a date for chart x-axis labels — shows date if span > 1 day
+  function fmtLabel(iso, spans) {
+    const d = new Date(iso);
+    if (spans > 1) {
+      // Multi-day: show "Apr 17 · 14:30"
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+           + ' · '
+           + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Full date+time for "last reading" display
+  function fmtDateTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+         + ' at '
+         + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
 
   function makeChart(id, borderColor) {
     return new Chart(document.getElementById(id), {
@@ -267,13 +346,21 @@
           legend: { display: false },
           tooltip: {
             callbacks: {
+              title: items => {
+                const d = new Date(items[0].label);
+                return isNaN(d)
+                  ? items[0].label
+                  : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+                  + ' · '
+                  + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              },
               label: ctx => ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) : 'No data'
             }
           }
         },
         scales: {
           x: {
-            ticks: { color: tickCol, font: { size: 10 }, maxTicksLimit: 7, autoSkip: true },
+            ticks: { color: tickCol, font: { size: 10 }, maxTicksLimit: 6, autoSkip: true },
             grid:  { color: gridCol }
           },
           y: {
@@ -291,10 +378,6 @@
     hum:  makeChart('hum-chart',  '#185FA5')
   };
 
-  function fmtTime(iso) {
-    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
   function setBadge(id, val, min, max) {
     const el = document.getElementById(id);
     if (isNaN(val)) { el.textContent = '—'; el.className = 'badge wait'; return; }
@@ -304,10 +387,24 @@
   }
 
   function loadChart(chart, feeds, field) {
-    const labels = feeds.map(f => fmtTime(f.created_at));
-    const data   = feeds.map(f => { const v = parseFloat(f[field]); return isNaN(v) ? null : +v.toFixed(2); });
-    chart.data.labels = labels;
+    // Detect if data spans more than one calendar day
+    const first = new Date(feeds[0]?.created_at);
+    const last  = new Date(feeds[feeds.length - 1]?.created_at);
+    const spanDays = (last - first) / 86400000;
+
+    // Store ISO strings as labels so tooltip can re-parse them
+    const isoLabels = feeds.map(f => f.created_at);
+    const dispLabels = feeds.map(f => fmtLabel(f.created_at, spanDays));
+    const data = feeds.map(f => { const v = parseFloat(f[field]); return isNaN(v) ? null : +v.toFixed(2); });
+
+    chart.data.labels = isoLabels;
     chart.data.datasets[0].data = data;
+
+    // Override x tick callback to use friendly display label
+    chart.options.scales.x.ticks.callback = function(val, idx) {
+      return dispLabels[idx] ?? '';
+    };
+
     const valid = data.filter(v => v !== null);
     if (valid.length) {
       const lo = Math.min(...valid), hi = Math.max(...valid);
@@ -316,6 +413,19 @@
       chart.options.scales.y.max = +(hi + pad).toFixed(1);
     }
     chart.update();
+  }
+
+  function setResultBanner(state, title, sub) {
+    const banner = document.getElementById('result-banner');
+    const icon   = document.getElementById('result-icon');
+    const ttl    = document.getElementById('result-title');
+    const sb     = document.getElementById('result-sub');
+
+    banner.className = 'result-banner ' + state;
+    banner.style.display = 'flex';
+    icon.textContent = state === 'pass' ? '✓' : state === 'fail' ? '✗' : '!';
+    ttl.textContent  = title;
+    sb.textContent   = sub;
   }
 
   async function fetchAndRender() {
@@ -327,9 +437,18 @@
     dot.className = 'dot loading';
     stxt.textContent = 'Fetching...';
 
+
     try {
-      const res  = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=${RESULTS}`);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+     const res  = await fetch(
+      `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=${RESULTS}`
+     );
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error('AUTH');
+        }
+        throw new Error('HTTP ' + res.status);
+      }
+
       const json  = await res.json();
       const feeds = json.feeds || [];
 
@@ -359,21 +478,41 @@
       const stale = (Date.now() - new Date(last.created_at).getTime()) > OFFLINE_GAP_MS;
       notice.style.display = stale ? 'block' : 'none';
 
-      const allPass = !isNaN(co2) && !isNaN(temp) && !isNaN(hum)
-        && co2  >= THRESHOLDS.co2.min  && co2  <= THRESHOLDS.co2.max
-        && temp >= THRESHOLDS.temp.min && temp <= THRESHOLDS.temp.max
-        && hum  >= THRESHOLDS.hum.min  && hum  <= THRESHOLDS.hum.max;
+      const co2Pass  = !isNaN(co2)  && co2  >= THRESHOLDS.co2.min  && co2  <= THRESHOLDS.co2.max;
+      const tempPass = !isNaN(temp) && temp >= THRESHOLDS.temp.min && temp <= THRESHOLDS.temp.max;
+      const humPass  = !isNaN(hum)  && hum  >= THRESHOLDS.hum.min  && hum  <= THRESHOLDS.hum.max;
+      const allPass  = co2Pass && tempPass && humPass;
 
-      dot.className    = stale ? 'dot' : (allPass ? 'dot ok' : 'dot fail');
-      stxt.textContent = stale
-        ? 'Device offline · last reading: ' + fmtTime(last.created_at)
-        : allPass ? 'All sensors passing' : 'One or more sensors out of range';
+      const readingDT = fmtDateTime(last.created_at);
+
+      if (stale) {
+        dot.className = 'dot';
+        stxt.textContent = 'Device offline · last reading: ' + readingDT;
+        setResultBanner('offline', 'Device offline', 'Last reading: ' + readingDT);
+      } else if (allPass) {
+        dot.className = 'dot ok';
+        stxt.textContent = 'All sensors passing';
+        setResultBanner('pass', 'All sensors within range', 'Last reading: ' + readingDT);
+      } else {
+        const failing = [
+          !co2Pass  && 'CO2',
+          !tempPass && 'Temp',
+          !humPass  && 'Humidity'
+        ].filter(Boolean).join(', ');
+        dot.className = 'dot fail';
+        stxt.textContent = 'Out of range: ' + failing;
+        setResultBanner('fail', 'Hive needs attention — ' + failing + ' out of range', 'Last reading: ' + readingDT);
+      }
 
       lupd.textContent = 'Checked ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     } catch(e) {
       dot.className = 'dot fail';
-      stxt.textContent = 'Could not reach ThingSpeak — make sure channel is set to Public';
+      if (e.message === 'AUTH') {
+        stxt.textContent = 'Channel is private — add ?key=YOUR_READ_API_KEY to the URL';
+      } else {
+        stxt.textContent = 'Could not reach ThingSpeak — check connection or channel visibility';
+      }
       console.error(e);
     }
   }
