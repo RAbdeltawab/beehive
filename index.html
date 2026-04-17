@@ -19,17 +19,17 @@
     .page { max-width: 800px; margin: 0 auto; }
     .header { padding: 10px 0; border-bottom: 2px solid var(--text); margin-bottom: 15px; }
 
-    /* Result Banner */
+    /* ── RESTORED PASS/FAIL BANNER ── */
     .result-banner {
-      display: none; align-items: center; gap: 12px; padding: 15px;
+      display: flex; /* Changed from none to flex */
+      align-items: center; gap: 12px; padding: 15px;
       border-radius: var(--radius); margin-bottom: 15px; border: 2px solid var(--text);
     }
-    .result-banner.pass { background: #EAF3DE; border-color: #3B6D11; }
-    .result-banner.fail { background: #FCEBEB; border-color: #A32D2D; }
-    .result-banner.offline { background: #FAEEDA; border-color: #BA7517; }
+    .result-banner.pass { background: #EAF3DE; border-color: #3B6D11; color: #1E4600; }
+    .result-banner.fail { background: #FCEBEB; border-color: #A32D2D; color: #8C0000; }
+    .result-banner.offline { background: #FAEEDA; border-color: #BA7517; color: #855400; }
     .result-icon { font-size: 24px; font-weight: 700; }
 
-    /* Metrics */
     .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
     .metric-card { background: var(--bg); border: 2px solid var(--text); border-radius: var(--radius); padding: 12px; text-align: center; }
     .m-label { font-size: 11px; font-weight: 700; text-transform: uppercase; }
@@ -38,7 +38,6 @@
     .badge.pass { background: #d4edda; }
     .badge.fail { background: #f8d7da; }
 
-    /* Charts */
     .chart-container { border: 2px solid var(--text); border-radius: var(--radius); padding: 15px; margin-bottom: 20px; background: var(--bg); }
     .chart-header { font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; font-size: 14px; }
     .chart-wrap { position: relative; width: 100%; height: 280px; }
@@ -52,10 +51,10 @@
   <div class="header"><h1 style="font-size: 22px;">HIVE MONITOR</h1></div>
 
   <div class="result-banner" id="result-banner">
-    <div class="result-icon" id="result-icon"></div>
+    <div class="result-icon" id="result-icon">!</div>
     <div>
-      <div id="result-title" style="font-weight: 700; font-size: 16px;"></div>
-      <div id="result-sub" style="font-size: 12px;"></div>
+      <div id="result-title" style="font-weight: 700; font-size: 16px;">Connecting...</div>
+      <div id="result-sub" style="font-size: 12px;">Waiting for ThingSpeak data</div>
     </div>
   </div>
 
@@ -99,7 +98,6 @@
   const LIMIT = 720;
   const RANGE = { co2: { min: 400, max: 10000 }, temp: { min: 70, max: 97 }, hum: { min: 50, max: 60 } };
 
-  // Improved Label Visibility
   function fmtLabel(iso) {
     const d = new Date(iso);
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
@@ -115,7 +113,7 @@
       }]},
       options: {
         responsive: true, maintainAspectRatio: false,
-        interaction: { intersect: false, mode: 'index' }, // Makes hover work better
+        interaction: { intersect: false, mode: 'index' },
         plugins: { 
           legend: { display: false },
           tooltip: {
@@ -128,17 +126,8 @@
           }
         },
         scales: {
-          x: { 
-            ticks: { 
-              color: '#000', 
-              font: { weight: 'bold', size: 11 }, // Bigger and bolder for outdoor
-              maxTicksLimit: 4 
-            } 
-          },
-          y: { 
-            grid: { color: '#ddd' }, 
-            ticks: { color: '#000', font: { weight: 'bold', size: 11 } } 
-          }
+          x: { ticks: { color: '#000', font: { weight: 'bold', size: 11 }, maxTicksLimit: 4 } },
+          y: { grid: { color: '#ddd' }, ticks: { color: '#000', font: { weight: 'bold', size: 11 } } }
         }
       }
     });
@@ -148,7 +137,6 @@
 
   function setBanner(state, title, sub) {
     const b = document.getElementById('result-banner');
-    b.style.display = 'flex';
     b.className = 'result-banner ' + state;
     document.getElementById('result-icon').textContent = state === 'pass' ? '✓' : state === 'fail' ? '✗' : '!';
     document.getElementById('result-title').textContent = title;
@@ -181,27 +169,26 @@
       };
       updateBadge('co2', cOk); updateBadge('temp', tOk); updateBadge('hum', hOk);
 
+      // Restore Overall Pass/Fail logic
       const stale = (Date.now() - new Date(last.created_at).getTime()) > 20 * 60 * 1000;
       if (stale) {
-        setBanner('offline', 'OFFLINE', 'Last: ' + timeStr);
+        setBanner('offline', 'MONITOR OFFLINE', 'Last data seen: ' + timeStr);
       } else if (cOk && tOk && hOk) {
-        setBanner('pass', 'ALL SYSTEMS NORMAL', 'Last sync: ' + timeStr);
+        setBanner('pass', 'ALL SYSTEMS NORMAL', 'Current readings are within healthy range.');
       } else {
-        setBanner('fail', 'CHECK HIVE', 'Out of range detected at ' + timeStr);
+        const failing = [!cOk && 'CO2', !tOk && 'Temp', !hOk && 'Hum'].filter(Boolean).join(', ');
+        setBanner('fail', 'CHECK HIVE - ' + failing, 'Out of range detected at ' + timeStr);
       }
 
       const updateChart = (chart, field) => {
         const values = feeds.map(f => { const v = parseFloat(f[field]); return isNaN(v) ? null : v; });
         chart.data.labels = feeds.map(f => fmtLabel(f.created_at));
         chart.data.datasets[0].data = values;
-        
-        // Dynamic scaling to prevent "flat" lines
         const valid = values.filter(v => v !== null);
         const min = Math.min(...valid), max = Math.max(...valid);
         const pad = (max - min) * 0.2 || 2;
         chart.options.scales.y.min = Math.floor(min - pad);
         chart.options.scales.y.max = Math.ceil(max + pad);
-        
         chart.update('none');
       };
       updateChart(charts.co2, 'field1'); updateChart(charts.temp, 'field2'); updateChart(charts.hum, 'field3');
