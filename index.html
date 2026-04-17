@@ -244,7 +244,7 @@
       <div class="metric-label">CO2</div>
       <div class="metric-value" id="co2-val">—</div>
       <div class="metric-unit">ppm</div>
-      <div class="metric-range">400 – 5000 ppm</div>
+      <div class="metric-range">400 – 10000 ppm</div>
       <span class="badge wait" id="co2-badge">—</span>
     </div>
     <div class="metric">
@@ -293,7 +293,7 @@
   const OFFLINE_GAP_MS = 12 * 60 * 1000;   // warn if last reading > 12 min ago
 
   const THRESHOLDS = {
-    co2:  { min: 400, max: 5000 },
+    co2:  { min: 400, max: 10000 },
     temp: { min: 70,  max: 97   },
     hum:  { min: 50,  max: 60   }
   };
