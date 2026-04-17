@@ -3,403 +3,290 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hive Monitor</title>
+  <title>Hive Monitor Pro</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #f7f6f2;
-      --surface:    #ffffff;
-      --border:     rgba(0,0,0,0.10);
-      --text:       #1a1a18;
-      --text-muted: #5f5e5a;
-      --text-hint:  #888780;
+      --bg:         #0f0f0e;
+      --surface:    #1a1a18;
+      --border:     rgba(255,255,255,0.08);
+      --text:       #f1efe8;
+      --text-muted: #b4b2a9;
+      --text-hint:  #71706a;
       --amber:      #BA7517;
-      --amber-bg:   #FAEEDA;
-      --green:      #3B6D11;
-      --green-bg:   #EAF3DE;
-      --red:        #A32D2D;
-      --red-bg:     #FCEBEB;
-      --radius-md:  8px;
-      --radius-lg:  12px;
+      --green:      #639922;
+      --red:        #E24B4A;
+      --radius-lg:  14px;
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg:       #1a1a18;
-        --surface:  #24241f;
-        --border:   rgba(255,255,255,0.08);
-        --text:     #f1efe8;
-        --text-muted:#b4b2a9;
-        --text-hint: #888780;
-        --amber-bg: #412402;
-        --green-bg: #173404;
-        --red-bg:   #501313;
-      }
-    }
-
-    html, body {
-      min-height: 100%;
+    body {
       background: var(--bg);
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
-      font-size: 16px;
+      line-height: 1.5;
     }
 
     .page {
-      max-width: 720px; /* Slightly wider for better charts */
+      max-width: 800px; /* Wider for better horizontal resolution */
       margin: 0 auto;
-      padding: 2rem 1.25rem 3rem;
+      padding: 1.5rem;
     }
 
     .header {
       display: flex;
       align-items: center;
-      gap: 14px;
-      margin-bottom: 1.75rem;
+      gap: 12px;
+      margin-bottom: 1.5rem;
     }
-    .hive-icon { width: 42px; height: 42px; flex-shrink: 0; }
-    .title     { font-size: 20px; font-weight: 500; }
-    .subtitle  { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 
     .status-bar {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 14px;
+      padding: 12px 16px;
       background: var(--surface);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-md);
-      margin-bottom: 1.25rem;
-    }
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-      background: var(--amber);
-    }
-    .dot.ok      { background: #639922; }
-    .dot.fail    { background: #E24B4A; }
-    .dot.loading { background: var(--amber); animation: blink 1s infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-    .status-text {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
       font-size: 13px;
-      color: var(--text-muted);
-      font-family: 'DM Mono', monospace;
-    }
-    .last-update {
-      margin-left: auto;
-      font-size: 12px;
-      color: var(--text-hint);
-      white-space: nowrap;
     }
 
-    .result-banner {
-      display: none;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 18px;
-      border-radius: var(--radius-lg);
-      margin-bottom: 1.25rem;
-      border: 0.5px solid transparent;
-    }
-    .result-banner.pass { background: var(--green-bg); border-color: rgba(59,109,17,0.20); }
-    .result-banner.fail { background: var(--red-bg); border-color: rgba(163,45,45,0.20); }
-    .result-banner.offline { background: var(--amber-bg); border-color: rgba(186,117,23,0.20); }
-    
-    .result-icon {
-      width: 32px; height: 32px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: 16px; font-weight: 500;
-    }
-    .result-banner.pass .result-icon { background: #3B6D11; color: #EAF3DE; }
-    .result-banner.fail .result-icon { background: #A32D2D; color: #FCEBEB; }
-    .result-banner.offline .result-icon { background: #BA7517; color: #FAEEDA; }
-
-    .offline-notice {
-      display: none;
-      padding: 10px 14px;
-      background: var(--amber-bg);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-md);
-      font-size: 13px;
-      color: var(--amber);
-      margin-bottom: 1.25rem;
-    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-hint); }
+    .dot.ok { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.fail { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .dot.loading { background: var(--amber); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
     .metrics {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));
-      gap: 10px;
-      margin-bottom: 1.75rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 2rem;
     }
-    .metric {
+
+    .metric-card {
       background: var(--surface);
-      border: 0.5px solid var(--border);
+      border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 16px;
-    }
-    .metric-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; }
-    .metric-value { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 500; line-height: 1; }
-    .metric-unit  { font-size: 12px; color: var(--text-hint); margin-top: 4px; }
-    .badge {
-      display: inline-block;
-      margin-top: 8px;
-      font-size: 11px;
-      font-weight: 500;
-      padding: 3px 9px;
-      border-radius: 20px;
-    }
-    .badge.pass { background: var(--green-bg); color: var(--green); }
-    .badge.fail { background: var(--red-bg);   color: var(--red);   }
-    .badge.wait { background: var(--amber-bg); color: var(--amber); }
-
-    .chart-block { margin-bottom: 1.4rem; }
-    .chart-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
-    .chart-card {
-      background: var(--surface);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 16px;
-    }
-    /* INCREASED HEIGHT FOR BETTER VISIBILITY */
-    .chart-wrap { position: relative; width: 100%; height: 240px; }
-
-    .footer {
-      margin-top: 2rem;
       text-align: center;
-      font-size: 12px;
-      color: var(--text-hint);
-      line-height: 2;
+    }
+
+    .m-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; }
+    .m-value { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500; margin: 4px 0; }
+    .m-unit  { font-size: 12px; color: var(--text-hint); }
+
+    .chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 1.5rem;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .chart-wrap { position: relative; width: 100%; height: 280px; } /* Increased height */
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      display: inline-block;
+    }
+    .badge.pass { background: rgba(99, 153, 34, 0.2); color: #8bc34a; }
+    .badge.fail { background: rgba(226, 75, 74, 0.2); color: #ff5252; }
+
+    @media (max-width: 600px) {
+      .metrics { grid-template-columns: 1fr; }
+      .chart-wrap { height: 200px; }
     }
   </style>
 </head>
 <body>
+
 <div class="page">
   <div class="header">
-    <svg class="hive-icon" viewBox="0 0 42 42" fill="none">
-      <polygon points="21,3 35,11 35,29 21,37 7,29 7,11" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
-      <polygon points="21,12 28,16 28,24 21,28 14,24 14,16" fill="#FAC775" stroke="#BA7517" stroke-width="1"/>
-      <circle cx="21" cy="20" r="3.5" fill="#BA7517"/>
-    </svg>
-    <div>
-      <div class="title">Mobile Hive Monitor</div>
-      <div class="subtitle">Live sensor data</div>
-    </div>
+    <div style="font-size: 20px; font-weight: 600;">Mobile Hive Monitor</div>
   </div>
 
   <div class="status-bar">
-    <div class="dot loading" id="dot"></div>
-    <span class="status-text" id="status-text">Connecting...</span>
-    <span class="last-update" id="last-update"></span>
-  </div>
-
-  <div class="result-banner" id="result-banner">
-    <div class="result-icon" id="result-icon"></div>
-    <div>
-      <div class="result-title" id="result-title" style="font-weight:600"></div>
-      <div class="result-sub"  id="result-sub" style="font-size:12px"></div>
-    </div>
-  </div>
-
-  <div class="offline-notice" id="offline-notice">
-    No recent data — showing last recorded readings.
+    <div id="status-dot" class="dot loading"></div>
+    <span id="status-text" style="font-family: 'DM Mono';">Syncing with ThingSpeak...</span>
+    <span id="last-check" style="margin-left: auto; color: var(--text-hint);">—</span>
   </div>
 
   <div class="metrics">
-    <div class="metric">
-      <div class="metric-label">CO2</div>
-      <div class="metric-value" id="co2-val">—</div>
-      <div class="metric-unit">ppm</div>
-      <span class="badge wait" id="co2-badge">—</span>
+    <div class="metric-card">
+      <div class="m-label">CO2</div>
+      <div class="m-value" id="v-co2">—</div>
+      <div class="m-unit">ppm</div>
+      <div id="b-co2" class="badge">Waiting</div>
     </div>
-    <div class="metric">
-      <div class="metric-label">Temp</div>
-      <div class="metric-value" id="temp-val">—</div>
-      <div class="metric-unit">°F</div>
-      <span class="badge wait" id="temp-badge">—</span>
+    <div class="metric-card">
+      <div class="m-label">Temperature</div>
+      <div class="m-value" id="v-temp">—</div>
+      <div class="m-unit">°F</div>
+      <div id="b-temp" class="badge">Waiting</div>
     </div>
-    <div class="metric">
-      <div class="metric-label">Humidity</div>
-      <div class="metric-value" id="hum-val">—</div>
-      <div class="metric-unit">%</div>
-      <span class="badge wait" id="hum-badge">—</span>
+    <div class="metric-card">
+      <div class="m-label">Humidity</div>
+      <div class="m-value" id="v-hum">—</div>
+      <div class="m-unit">%</div>
+      <div id="b-hum" class="badge">Waiting</div>
     </div>
   </div>
 
-  <div class="chart-block">
-    <div class="chart-label">CO2 · ppm</div>
-    <div class="chart-card"><div class="chart-wrap"><canvas id="co2-chart"></canvas></div></div>
-  </div>
-  <div class="chart-block">
-    <div class="chart-label">Temperature · °F</div>
-    <div class="chart-card"><div class="chart-wrap"><canvas id="temp-chart"></canvas></div></div>
-  </div>
-  <div class="chart-block">
-    <div class="chart-label">Humidity · %</div>
-    <div class="chart-card"><div class="chart-wrap"><canvas id="hum-chart"></canvas></div></div>
+  <div class="chart-container">
+    <div class="chart-header"><span>CO2 Levels</span><span id="co2-stats">—</span></div>
+    <div class="chart-wrap"><canvas id="c-co2"></canvas></div>
   </div>
 
-  <div class="footer">
-    Refreshes every 5 minutes &nbsp;·&nbsp; ThingSpeak History (720 pts)
+  <div class="chart-container">
+    <div class="chart-header"><span>Internal Temp</span><span id="temp-stats">—</span></div>
+    <div class="chart-wrap"><canvas id="c-temp"></canvas></div>
+  </div>
+
+  <div class="chart-container">
+    <div class="chart-header"><span>Humidity</span><span id="hum-stats">—</span></div>
+    <div class="chart-wrap"><canvas id="c-hum"></canvas></div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-  const CHANNEL        = '3329131';
-  const RESULTS        = 720;               
-  const REFRESH_MS     = 300000;            
-  const OFFLINE_GAP_MS = 15 * 60 * 1000;   
+  const CHANNEL = '3329131';
+  const LIMIT   = 720; 
+  const OFFLINE_THRESHOLD = 20 * 60 * 1000; // 20 mins
 
-  const THRESHOLDS = {
+  const RANGE = {
     co2:  { min: 400, max: 10000 },
-    temp: { min: 70,  max: 97   },
-    hum:  { min: 50,  max: 60   }
+    temp: { min: 70,  max: 97 },
+    hum:  { min: 50,  max: 60 }
   };
 
-  const isDark  = matchMedia('(prefers-color-scheme: dark)').matches;
-  const gridCol = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-  const tickCol = '#888780';
-
-  function fmtLabel(iso, spans) {
+  // Helper for clear time labels
+  function formatTime(iso) {
     const d = new Date(iso);
-    if (spans > 0.5) {
-      return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
-             d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    }
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
-  function makeChart(id, color) {
-    return new Chart(document.getElementById(id), {
+  function makeChart(ctxId, color) {
+    const ctx = document.getElementById(ctxId).getContext('2d');
+    return new Chart(ctx, {
       type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          data: [],
-          borderColor: color,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          fill: true,
-          backgroundColor: color + '10',
-          tension: 0.4, // Smooths the lines for better aesthetics
-          spanGaps: true
-        }]
-      },
+      data: { labels: [], datasets: [{ 
+        data: [], 
+        borderColor: color, 
+        borderWidth: 2, 
+        pointRadius: 0,
+        pointHitRadius: 20,
+        tension: 0.3, // Smooth but not "floaty"
+        fill: true,
+        backgroundColor: color + '15',
+        spanGaps: false // CRITICAL: Shows gaps when device is off
+      }]},
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { intersect: false, mode: 'index' },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark ? '#2a2a26' : '#fff',
-            titleColor: isDark ? '#f1efe8' : '#1a1a18',
-            bodyColor: isDark ? '#b4b2a9' : '#5f5e5a',
-            borderColor: 'rgba(0,0,0,0.1)',
-            borderWidth: 1,
-            padding: 10,
-            displayColors: false
-          }
-        },
+        parsing: false, // Performance boost for 700+ points
+        normalized: true,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
         scales: {
-          x: {
-            grid: { display: false }, // Cleaner look without vertical lines
-            ticks: { color: tickCol, font: { size: 10 }, maxTicksLimit: 6 }
-          },
-          y: {
-            grid: { color: gridCol, drawBorder: false },
-            ticks: { color: tickCol, font: { size: 10 }, maxTicksLimit: 5, padding: 8 }
-          }
+          x: { grid: { display: false }, ticks: { color: '#71706a', font: { size: 10 }, maxTicksLimit: 6 } },
+          y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#71706a', font: { size: 10 } } }
         }
       }
     });
   }
 
   const charts = {
-    co2:  makeChart('co2-chart',  '#BA7517'),
-    temp: makeChart('temp-chart', '#3B6D11'),
-    hum:  makeChart('hum-chart',  '#185FA5')
+    co2:  makeChart('c-co2', '#BA7517'),
+    temp: makeChart('c-temp', '#639922'),
+    hum:  makeChart('c-hum', '#185FA5')
   };
 
-  function setBadge(id, val, min, max) {
-    const el = document.getElementById(id);
-    if (isNaN(val)) { el.textContent = '—'; el.className = 'badge wait'; return; }
-    const ok = val >= min && val <= max;
-    el.textContent = ok ? 'Normal' : 'Check Hive';
-    el.className = 'badge ' + (ok ? 'pass' : 'fail');
+  function updateUI(id, val, range) {
+    const el = document.getElementById('v-' + id);
+    const bg = document.getElementById('b-' + id);
+    if (isNaN(val)) return;
+
+    el.textContent = (id === 'co2') ? Math.round(val) : val.toFixed(1);
+    const isOk = val >= range.min && val <= range.max;
+    bg.textContent = isOk ? 'NORMAL' : 'OUT OF RANGE';
+    bg.className = 'badge ' + (isOk ? 'pass' : 'fail');
+    return isOk;
   }
 
-  function loadChart(chart, feeds, field) {
-    const first = new Date(feeds[0]?.created_at);
-    const last  = new Date(feeds[feeds.length - 1]?.created_at);
-    const spanDays = (last - first) / 86400000;
-
-    const data = feeds.map(f => {
-      const v = parseFloat(f[field]);
-      return (isNaN(v) || v === 0 && field === 'field1') ? null : v; 
-    });
-
-    chart.data.labels = feeds.map(f => fmtLabel(f.created_at, spanDays));
-    chart.data.datasets[0].data = data;
-
-    const valid = data.filter(v => v !== null);
-    if (valid.length) {
-      const lo = Math.min(...valid);
-      const hi = Math.max(...valid);
-      const buffer = (hi - lo) * 0.15 || 2;
-      chart.options.scales.y.min = Math.floor(lo - buffer);
-      chart.options.scales.y.max = Math.ceil(hi + buffer);
-    }
-    chart.update('none');
-  }
-
-  async function fetchAndRender() {
-    const dot = document.getElementById('dot');
-    const stxt = document.getElementById('status-text');
-    
-    dot.className = 'dot loading';
+  async function sync() {
+    const dot = document.getElementById('status-dot');
+    const txt = document.getElementById('status-text');
     
     try {
-      const res = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=${RESULTS}`);
-      const json = await res.json();
-      const feeds = json.feeds || [];
+      const response = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=${LIMIT}`);
+      const data = await response.json();
+      const feeds = data.feeds;
 
       if (!feeds.length) return;
 
-      const last = feeds[feeds.length - 1];
-      const co2 = parseFloat(last.field1), temp = parseFloat(last.field2), hum = parseFloat(last.field3);
+      const lastReading = feeds[feeds.length - 1];
+      const isStale = (Date.now() - new Date(lastReading.created_at).getTime()) > OFFLINE_THRESHOLD;
 
-      document.getElementById('co2-val').textContent = isNaN(co2) ? '—' : Math.round(co2);
-      document.getElementById('temp-val').textContent = isNaN(temp) ? '—' : temp.toFixed(1);
-      document.getElementById('hum-val').textContent = isNaN(hum) ? '—' : hum.toFixed(1);
+      // Update Top Status
+      dot.className = isStale ? 'dot' : 'dot ok';
+      txt.textContent = isStale ? 'Monitor Offline (Showing History)' : 'Monitor Active';
+      document.getElementById('last-check').textContent = 'Last: ' + formatTime(lastReading.created_at);
 
-      setBadge('co2-badge', co2, THRESHOLDS.co2.min, THRESHOLDS.co2.max);
-      setBadge('temp-badge', temp, THRESHOLDS.temp.min, THRESHOLDS.temp.max);
-      setBadge('hum-badge', hum, THRESHOLDS.hum.min, THRESHOLDS.hum.max);
+      // Process Metrics
+      const cPass = updateUI('co2',  parseFloat(lastReading.field1), RANGE.co2);
+      const tPass = updateUI('temp', parseFloat(lastReading.field2), RANGE.temp);
+      const hPass = updateUI('hum',  parseFloat(lastReading.field3), RANGE.hum);
 
-      loadChart(charts.co2, feeds, 'field1');
-      loadChart(charts.temp, feeds, 'field2');
-      loadChart(charts.hum, feeds, 'field3');
-
-      const lastSeen = new Date(last.created_at);
-      const stale = (Date.now() - lastSeen.getTime()) > OFFLINE_GAP_MS;
+      // Refresh Charts
+      const labels = feeds.map(f => f.created_at);
       
-      document.getElementById('offline-notice').style.display = stale ? 'block' : 'none';
-      dot.className = stale ? 'dot' : 'dot ok';
-      stxt.textContent = stale ? 'Monitor Offline' : 'Live Connection';
-      document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      const updateChartData = (chart, field, key) => {
+        const values = feeds.map(f => {
+            const v = parseFloat(f[field]);
+            return isNaN(v) ? null : v;
+        });
+        chart.data.labels = labels.map(l => formatTime(l));
+        chart.data.datasets[0].data = values;
+        
+        // Intelligent Y-Axis Scaling
+        const valid = values.filter(v => v !== null);
+        const min = Math.min(...valid);
+        const max = Math.max(...valid);
+        const pad = (max - min) * 0.2 || 2;
+        chart.options.scales.y.min = Math.floor(min - pad);
+        chart.options.scales.y.max = Math.ceil(max + pad);
+        
+        chart.update('none');
+      };
 
-    } catch(e) {
+      updateChartData(charts.co2,  'field1');
+      updateChartData(charts.temp, 'field2');
+      updateChartData(charts.hum,  'field3');
+
+    } catch (err) {
+      txt.textContent = 'Connection Error';
       dot.className = 'dot fail';
-      stxt.textContent = 'Connection Error';
     }
   }
 
-  fetchAndRender();
-  setInterval(fetchAndRender, REFRESH_MS);
+  sync();
+  setInterval(sync, 300000); // Sync every 5 mins
 </script>
+
 </body>
 </html>
